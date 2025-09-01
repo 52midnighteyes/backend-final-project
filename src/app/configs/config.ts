@@ -1,4 +1,3 @@
 import "dotenv/config";
 
-export const { PORT, CORS_ORIGIN, NODEMAILER_EMAIL, NODEMAILER_PASS } =
-  process.env;
+export const { PORT, FE_URL, NODEMAILER_EMAIL, NODEMAILER_PASS } = process.env;
