@@ -1,0 +1,254 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  USER
+  TENANT
+  ADMIN
+}
+        
+
+model User {
+  id String @id @unique @default(uuid())
+  first_name String
+  last_name String
+  email String @unique
+  password String
+  role UserRole @default(USER)
+  avatar String?
+  isVerified Boolean @default(false)
+
+  login_attempt Int @default(0)
+  login_time_out DateTime?
+  is_suspended Boolean @default(false)
+  suspended_cooldown DateTime?
+  
+  created_at DateTime @default(now())
+  deleted_at DateTime? 
+
+  replies Reply[]
+  transactions Transaction[] 
+  temporary_tokens  Temporary_Token[]
+  reservations Reservation[]
+
+}
+
+
+model Property {
+  id String @id @unique @default(uuid())
+  name String
+  city_id String
+  description String
+  category_id String
+  rooms Room[]
+  
+  slug String @unique
+  pictures Property_Picture[]
+
+  deleted_at DateTime?  
+
+  category Category @relation(fields: [category_id], references: [id])
+  city City @relation(fields: [city_id], references: [id])
+  pricings Pricing[]
+  room_types Room_Type[]
+  bed_types Bed_Type[]
+}
+
+
+model Property_Picture{
+  id String @id @default(uuid())
+  url String @unique
+  property_id String
+
+  property Property @relation(fields: [property_id], references: [id])
+}
+
+model Reservation {
+  id String @id @unique @default(uuid())
+  user_id String
+  transaction_id String @unique
+  
+  is_checkin Boolean @default(false)
+  is_checkout Boolean @default(false)
+
+  created_at DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transaction_id], references: [id])
+  user User @relation(fields: [user_id], references: [id])
+  review Review?
+
+}
+
+enum Transaction_Status {
+  WAITING_FOR_PAYMENT
+  WAITING_FOR_CONFIRMATION
+  PAID
+  CANCELED
+  EXPIRED
+}
+
+model Transaction {
+  id String @id @unique @default(uuid())
+  user_id String
+  room_id String
+  amount Decimal
+  payment_proof String?
+  status Transaction_Status
+
+  start_date DateTime
+  end_date DateTime
+
+  created_at DateTime @default(now())
+  expired_at DateTime?
+
+reservation Reservation?
+room Room @relation(fields: [room_id], references: [id])
+user User @relation(fields: [user_id], references: [id])
+}
+
+enum Pricing_type {
+NOMINAL
+PERCENTAGE
+}
+
+enum Pricing_priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model Pricing {
+  id String @id @default(uuid())
+  property_id String
+  type Pricing_type
+  value Decimal
+  priority_level Pricing_priority
+  
+  is_rentable Boolean @default(true)
+
+  start_date DateTime
+  end_date DateTime
+
+  created_at DateTime
+
+
+  property Property @relation(fields: [property_id], references: [id])
+}
+
+model Review {
+  id String @id @default(uuid())
+  reservation_id String @unique
+  rating Int
+  notes String
+  replies Reply[]
+
+
+  reservation Reservation @relation(fields: [reservation_id], references: [id])
+}
+
+model Reply {
+  id String @id @default(uuid())
+  user_id String
+  review_id String
+  notes String
+  
+  user User @relation(fields: [user_id], references: [id])
+  review Review @relation(fields: [review_id], references: [id])
+}
+
+model Room {
+  id String @id @unique @default(uuid())
+  name String
+  description String
+  capacity Int
+  base_price Int
+  type_id String 
+  property_id String
+  size Decimal
+  bed_type_id String 
+
+  
+  transactions Transaction[]
+  bed_type Bed_Type @relation(fields: [bed_type_id], references: [id])
+  room_type Room_Type @relation(fields: [type_id], references: [id])
+  property Property @relation(fields: [property_id], references: [id])
+}
+
+model Bed_Type {
+  id String @id @default(uuid())
+  property_id String
+  name String
+
+  rooms Room[]
+  property Property @relation(fields: [property_id], references: [id])
+}
+
+model Room_Type {
+  id String @id @unique @default(uuid())
+  property_id String
+  name String
+
+  rooms Room[]
+  property Property @relation(fields: [property_id], references: [id])
+
+}
+
+
+model Category {
+  id String @id @unique @default(uuid())
+  name String
+  description String
+  properties Property[]
+}
+
+
+model Country {
+  id String @id @default(uuid())
+  name String
+  code String @unique
+  provinces Province[]
+}
+
+model Province {
+  id String  @id @default(uuid())
+  name String
+  country_id String
+  country Country @relation(fields: [country_id], references: [id])
+  cities City[]
+}
+
+model City {
+  id String @id @default(uuid())
+  name String
+  province_id String
+  properties Property[]
+  province Province @relation(fields: [province_id], references: [id])
+}
+
+enum Temporary_Token_Type {
+  RESET_PASSWORD
+  RESET_EMAIL
+  FORGOT_PASSWORD
+}
+
+model Temporary_Token {
+  id String @id @default(uuid())
+  token String @unique
+  user_id String
+  expired_at DateTime
+  type Temporary_Token_Type
+
+
+  user User @relation(fields: [user_id],references: [id])
+}
+
+
+

@@ -1,12 +1,14 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import { CORS_ORIGIN } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 
 const app = express();
 
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+const corsOrigin =
+  CORS_ORIGIN || process.env.CORS_ORIGIN || "http://localhost:3000";
 
 app.use(express.json());
 app.use(
