@@ -9,7 +9,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum UserRole {
+enum User_Role {
   USER
   TENANT
   ADMIN
@@ -18,11 +18,12 @@ enum UserRole {
 
 model User {
   id String @id @unique @default(uuid())
+  phone_number Int?
   first_name String
   last_name String
   email String @unique
-  password String
-  role UserRole @default(USER)
+  password String?
+  role User_Role @default(USER)
   avatar String?
   isVerified Boolean @default(false)
 
@@ -30,6 +31,8 @@ model User {
   login_time_out DateTime?
   is_suspended Boolean @default(false)
   suspended_cooldown DateTime?
+
+  is_external_login Boolean? @default(false)
   
   created_at DateTime @default(now())
   deleted_at DateTime? 
@@ -39,6 +42,8 @@ model User {
   temporary_tokens  Temporary_Token[]
   reservations Reservation[]
 
+
+@@map("Users")
 }
 
 
@@ -57,9 +62,8 @@ model Property {
 
   category Category @relation(fields: [category_id], references: [id])
   city City @relation(fields: [city_id], references: [id])
-  pricings Pricing[]
-  room_types Room_Type[]
-  bed_types Bed_Type[]
+
+  @@map("Properties")
 }
 
 
@@ -69,6 +73,8 @@ model Property_Picture{
   property_id String
 
   property Property @relation(fields: [property_id], references: [id])
+
+  @@map("Property_Pictures")
 }
 
 model Reservation {
@@ -85,6 +91,7 @@ model Reservation {
   user User @relation(fields: [user_id], references: [id])
   review Review?
 
+@@map("Reservations")
 }
 
 enum Transaction_Status {
@@ -98,8 +105,9 @@ enum Transaction_Status {
 model Transaction {
   id String @id @unique @default(uuid())
   user_id String
-  room_id String
+  room_type_id String
   amount Decimal
+  special_request String
   payment_proof String?
   status Transaction_Status
 
@@ -109,14 +117,16 @@ model Transaction {
   created_at DateTime @default(now())
   expired_at DateTime?
 
-reservation Reservation?
-room Room @relation(fields: [room_id], references: [id])
-user User @relation(fields: [user_id], references: [id])
+  reservation Reservation?
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
+  user User @relation(fields: [user_id], references: [id])
+
+@@map("Transactions")
 }
 
 enum Pricing_type {
-NOMINAL
-PERCENTAGE
+  NOMINAL
+  PERCENTAGE
 }
 
 enum Pricing_priority {
@@ -127,8 +137,7 @@ enum Pricing_priority {
 
 model Pricing {
   id String @id @default(uuid())
-  property_id String
-  type Pricing_type
+  room_type_id String
   value Decimal
   priority_level Pricing_priority
   
@@ -140,7 +149,9 @@ model Pricing {
   created_at DateTime
 
 
-  property Property @relation(fields: [property_id], references: [id])
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
+
+@@map("Pricings")
 }
 
 model Review {
@@ -150,8 +161,9 @@ model Review {
   notes String
   replies Reply[]
 
-
   reservation Reservation @relation(fields: [reservation_id], references: [id])
+
+@@map("Reviews")
 }
 
 model Reply {
@@ -162,51 +174,95 @@ model Reply {
   
   user User @relation(fields: [user_id], references: [id])
   review Review @relation(fields: [review_id], references: [id])
+
+@@map("Replies")
 }
 
+
 model Room {
+  id String @id @unique @default(uuid())
+  type_id String 
+  property_id String
+  bed_type_id String
+
+
+  room_type Room_Type @relation(fields: [type_id], references: [id])
+  property Property @relation(fields: [property_id], references: [id])
+
+  @@map("Rooms")
+}
+
+model Bed_Type {
+  id String @id @default(uuid())
+  name String
+
+  room_types Room_Type[]
+
+  @@map("Bed_Types")
+}
+
+model Room_Type {
   id String @id @unique @default(uuid())
   name String
   description String
   capacity Int
   base_price Int
-  type_id String 
-  property_id String
   size Decimal
-  bed_type_id String 
+  bed_type_id String
+  room_type_pictures Room_Type_Picture[]
+  facilities Room_Type_Facility[]
+
 
   
+  rooms Room[]
+  pricings Pricing[]
   transactions Transaction[]
   bed_type Bed_Type @relation(fields: [bed_type_id], references: [id])
-  room_type Room_Type @relation(fields: [type_id], references: [id])
-  property Property @relation(fields: [property_id], references: [id])
+  
+
+    @@map("Room_Types")
+
 }
 
-model Bed_Type {
+model Room_Type_Picture {
   id String @id @default(uuid())
-  property_id String
-  name String
+  url String
+  description String
+  room_type_id String
 
-  rooms Room[]
-  property Property @relation(fields: [property_id], references: [id])
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
 }
 
-model Room_Type {
-  id String @id @unique @default(uuid())
-  property_id String
-  name String
+model Room_Type_Facility {
+  room_type_id String
+  room_facility_id String
 
-  rooms Room[]
-  property Property @relation(fields: [property_id], references: [id])
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
+  room_facility Room_Facility @relation(fields: [room_facility_id], references: [id])
 
+  @@id([room_type_id, room_facility_id])
 }
 
+
+
+
+model Room_Facility {
+  id String @id @default(uuid())
+  name String
+  description String
+  room_types Room_Type_Facility[]
+
+    @@map("Room_Facilities")
+
+}
 
 model Category {
   id String @id @unique @default(uuid())
   name String
   description String
   properties Property[]
+
+  @@map("Categories")
 }
 
 
@@ -215,6 +271,8 @@ model Country {
   name String
   code String @unique
   provinces Province[]
+
+@@map("Countries")
 }
 
 model Province {
@@ -223,6 +281,8 @@ model Province {
   country_id String
   country Country @relation(fields: [country_id], references: [id])
   cities City[]
+
+  @@map("Provinces")
 }
 
 model City {
@@ -231,6 +291,8 @@ model City {
   province_id String
   properties Property[]
   province Province @relation(fields: [province_id], references: [id])
+
+  @@map("Cities")
 }
 
 enum Temporary_Token_Type {
@@ -248,6 +310,8 @@ model Temporary_Token {
 
 
   user User @relation(fields: [user_id],references: [id])
+
+  @@map("Temporary_Tokens")
 }
 
 
