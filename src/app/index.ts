@@ -4,7 +4,6 @@ import cors from "cors";
 import { FE_URL } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
-import { AppError } from "./classes/appError.class";
 
 const app = express();
 
