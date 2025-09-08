@@ -5,6 +5,8 @@ import { FE_URL } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 
+import AddOnRouter from "./routers/add-ons-routers";
+
 const app = express();
 
 const corsOrigin = FE_URL || process.env.CORS_ORIGIN || "http://localhost:3000";
@@ -26,6 +28,12 @@ app.get("/", (req: Request, res: Response, next: NextFunction) => {
     next(error);
   }
 });
+
+//EndPoint
+
+app.use("/api/add-ons", AddOnRouter);
+
+//ErrorHandler
 
 app.use(errorHandler);
 

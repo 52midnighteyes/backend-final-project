@@ -3,7 +3,7 @@ import { z, ZodObject } from "zod";
 
 type ValidationTarget = "body" | "query" | "params";
 
-export function validate(
+export function ZodValidator(
   schema: ZodObject<any, any>,
   target: ValidationTarget
 ) {

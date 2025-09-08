@@ -41,6 +41,7 @@ model User {
   transactions Transaction[] 
   temporary_tokens  Temporary_Token[]
   reservations Reservation[]
+  properties Property[]
 
 
 @@map("Users")
@@ -53,15 +54,19 @@ model Property {
   city_id String
   description String
   category_id String
-  rooms Room[]
-  
+  user_id String
+  deleted_at DateTime?
   slug String @unique
-  pictures Property_Picture[]
 
-  deleted_at DateTime?  
+  pictures Property_Picture[]
+  room_types Room_Type[]
+
+  transactions Transaction[]
+  add_ons Add_On[]
 
   category Category @relation(fields: [category_id], references: [id])
   city City @relation(fields: [city_id], references: [id])
+  user User @relation(fields: [user_id], references: [id])
 
   @@map("Properties")
 }
@@ -105,6 +110,7 @@ enum Transaction_Status {
 model Transaction {
   id String @id @unique @default(uuid())
   user_id String
+  property_id String
   room_type_id String
   amount Decimal
   special_request String
@@ -118,6 +124,7 @@ model Transaction {
   expired_at DateTime?
 
   reservation Reservation?
+  property Property @relation(fields: [property_id], references: [id])
   room_type Room_Type @relation(fields: [room_type_id], references: [id])
   user User @relation(fields: [user_id], references: [id])
 
@@ -147,7 +154,6 @@ model Pricing {
   end_date DateTime
 
   created_at DateTime
-
 
   room_type Room_Type @relation(fields: [room_type_id], references: [id])
 
@@ -179,19 +185,6 @@ model Reply {
 }
 
 
-model Room {
-  id String @id @unique @default(uuid())
-  type_id String 
-  property_id String
-  bed_type_id String
-
-
-  room_type Room_Type @relation(fields: [type_id], references: [id])
-  property Property @relation(fields: [property_id], references: [id])
-
-  @@map("Rooms")
-}
-
 model Bed_Type {
   id String @id @default(uuid())
   name String
@@ -208,20 +201,38 @@ model Room_Type {
   capacity Int
   base_price Int
   size Decimal
+
+  total_rooms Int
+
+
   bed_type_id String
+  property_id String
+
+
   room_type_pictures Room_Type_Picture[]
   facilities Room_Type_Facility[]
-
-
-  
-  rooms Room[]
   pricings Pricing[]
   transactions Transaction[]
+  
+  
+  property Property @relation(fields: [property_id], references: [id])
   bed_type Bed_Type @relation(fields: [bed_type_id], references: [id])
   
 
     @@map("Room_Types")
 
+}
+
+model Add_On {
+  id String @id @default(uuid())
+  property_id String
+  name String
+  description String
+  price Decimal
+
+  property Property @relation(fields: [property_id], references: [id])
+
+  @@map("Add_Ons")
 }
 
 model Room_Type_Picture {
