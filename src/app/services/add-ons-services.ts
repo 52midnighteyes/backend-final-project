@@ -39,7 +39,6 @@ export async function GetAllAddOnService(params: IGetAllAddOnsParams) {
       where: {
         property: {
           id: params.property_id,
-          user_id: params.owner_id,
         },
       },
     });
