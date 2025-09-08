@@ -43,6 +43,10 @@ export async function GetAllAddOnService(params: IGetAllAddOnsParams) {
       },
     });
 
+    if (response.length < 1) {
+      console.log("there's no add ons in this property");
+    }
+
     return response;
   } catch (err) {
     throw err;
