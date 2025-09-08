@@ -43,8 +43,9 @@ export async function GetAllAddOnService(params: IGetAllAddOnsParams) {
       },
     });
 
-    if (response.length < 1)
-      throw new AppError(404, "There's no add ons found in this property");
+    if (response.length < 1) {
+      console.log("there's no add ons in this property");
+    }
 
     return response;
   } catch (err) {
