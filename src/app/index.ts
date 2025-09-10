@@ -4,17 +4,24 @@ import cors from "cors";
 import { FE_URL } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 import AddOnRouter from "./routers/add-ons-routers";
+import AuthRouter from "./routers/auth.router";
+
+
 
 const app = express();
 
-const corsOrigin = FE_URL || process.env.CORS_ORIGIN || "http://localhost:3000";
+const corsOrigin = "http://localhost:3000";
 
 app.use(express.json());
 app.use(
   cors({
     origin: corsOrigin,
+    credentials: true,
   })
 );
 app.use(helmet());
@@ -32,6 +39,11 @@ app.get("/", (req: Request, res: Response, next: NextFunction) => {
 //EndPoint
 
 app.use("/api/add-ons", AddOnRouter);
+app.use("/api/auth", AuthRouter);
+
+app.get("/api/ping", (req, res) => {
+  res.json({ message: "pong" });
+});
 
 //ErrorHandler
 
