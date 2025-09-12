@@ -1,100 +1,64 @@
-import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import {
   loginService,
   registerService,
   verifyEmailService,
-  completeProfileService,
+  setPasswordService,
 } from "../services/auth.services";
+import { Request, Response } from "express";
 
-const JWT_SECRET = process.env.JWT_SECRET || "restifyNIH";
-
-// helper bikin JWT
-const generateToken = (user: any) => {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      first_name: user.first_name,
-      last_name: user.last_name,
-    },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-};
-
-// LOGIN
 export async function loginController(req: Request, res: Response) {
   try {
-    const { user } = await loginService(req.body);
-    const token = generateToken(user);
-
-    res.status(200).json({
+    const { user, token } = await loginService(req.body);
+    res.json({
+      status: true,
       message: "Login successful",
-      user,
-      token,
+      data: { user, token },
     });
   } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 }
 
-// REGISTER
 export async function registerController(req: Request, res: Response) {
   try {
     const user = await registerService(req.body);
-
-    res.status(201).json({
+    res.json({
+      status: true,
       message: "Registration successful, check your email for verification",
-      user,
+      data: { user },
     });
   } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 }
 
-// VERIFY EMAIL
 export async function verifyEmailController(req: Request, res: Response) {
   try {
     const { token } = req.query;
-    if (!token || typeof token !== "string") {
-      return res.status(400).json({ message: "Token is required" });
-    }
+    if (!token)
+      return res
+        .status(400)
+        .json({ status: false, message: "Token diperlukan" });
 
-    const { user } = await verifyEmailService(token);
-    const jwtToken = generateToken(user);
-
-    res.status(200).json({
-      message: "Email verified successfully",
-      user,
-      token: jwtToken,
-    });
+    const result = await verifyEmailService(String(token));
+    res.json({ status: true, ...result });
   } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 }
 
-// COMPLETE PROFILE
-export async function completeProfileController(req: Request, res: Response) {
+export async function setPasswordController(req: Request, res: Response) {
   try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: "Unauthorized" });
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ status: false, message: "Token & password wajib diisi" });
     }
 
-    const result = await completeProfileService({
-      ...req.body,
-      id: req.user.id,
-    });
-
-    const token = generateToken(result.user);
-
-    res.status(200).json({
-      message: result.message,
-      user: result.user,
-      token,
-    });
+    const result = await setPasswordService(token, password);
+    res.json({ status: true, ...result });
   } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ status: false, message: err.message });
   }
 }

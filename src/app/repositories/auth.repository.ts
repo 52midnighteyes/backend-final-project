@@ -14,9 +14,9 @@ export async function registerUser(data: IRegisterParam) {
     data: {
       ...data,
       email: data.email,
-      role: data.role || "USER",
-      first_name: "NewUser",
-      last_name: "User",
+      role: data.role,
+      first_name: "",
+      last_name: "",
       phone_number: null,
       password: "",
       avatar: "",
@@ -43,6 +43,6 @@ export async function findTemporaryToken(token: string) {
 }
 
 // Hapus temporary token
-// export async function deleteTemporaryToken(id: string) {
-//   return prisma.temporary_Token.delete({ where: { id } });
-// }
+export async function deleteTemporaryToken(id: string) {
+  return prisma.temporary_Token.delete({ where: { id } });
+}
