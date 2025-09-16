@@ -1,9 +1,9 @@
 export interface IUserParams {
   id: string;
   email: string;
-  firstname: string;
-  lastname: string;
-  avatar: string | null;
+  first_name: string;
+  last_name: string;
+  avatar?: string | null;
   role: string;
 }
 

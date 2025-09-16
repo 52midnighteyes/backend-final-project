@@ -9,3 +9,7 @@ ALTER TABLE "final_project"."Properties" ADD COLUMN     "user_id" TEXT NOT NULL;
 
 -- AddForeignKey
 ALTER TABLE "final_project"."Properties" ADD CONSTRAINT "Properties_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "final_project"."Users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+
+
+
