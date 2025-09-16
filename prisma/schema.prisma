@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -294,6 +295,7 @@ enum Temporary_Token_Type {
   RESET_PASSWORD
   RESET_EMAIL
   FORGOT_PASSWORD
+  REGISTRATION
 }
 
 
@@ -304,9 +306,11 @@ enum User_Role {
 }
 
 enum Transaction_Status {
+  ON_GOING
   WAITING_FOR_PAYMENT
   WAITING_FOR_CONFIRMATION
   PAID
+  PAYMENT_PROOF_REJECTED
   CANCELED
   EXPIRED
 }
