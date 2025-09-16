@@ -2,13 +2,35 @@ import prisma from "../lib/prisma";
 import { AppError } from "../classes/appError.class";
 
 import {
+  IAddOn,
   ICreateTransaction,
   IPricing,
-} from "../interfaces/transactions-interface";
+  IUpdatePaymentStatus,
+  IUploadPaymentProof,
+} from "../Interfaces/transactions.Interface";
 import { roomAndAddOnsCalculator } from "../utils/calculatePrice-utils";
 import { Decimal } from "@prisma/client/runtime/library";
-import { roomPriceCalculator } from "../utils/roomPriceCalculator-utils";
+import {
+  enumerateNights,
+  roomPriceCalculator,
+} from "../utils/roomPriceCalculator-utils";
 import { toMidnight } from "../utils/roomPriceCalculator-utils";
+
+import {
+  ensureRows,
+  checkRoomAvailibility,
+  updateHoldByRange,
+  addOnValidator,
+  findPropertyAndRoomById,
+  findRoomPricingsByRange,
+  createTransaction,
+  createManyAddOnTransactions,
+  findUserById,
+  updateTransactionStatus,
+  moveHoldToBookedByRange,
+} from "../repositories/transactions.repository";
+import { error } from "console";
+import { cloudinaryUpload } from "../utils/cloudinary";
 
 export async function CreateTransactionService(params: ICreateTransaction) {
   try {
@@ -17,38 +39,34 @@ export async function CreateTransactionService(params: ICreateTransaction) {
     if (end <= start)
       throw new AppError(400, "end_date must be after start_date");
 
-    const property = await prisma.property.findFirst({
-      where: { id: params.property_id },
-      include: {
-        room_types: {
-          where: { id: params.room_type_id },
-          select: { id: true, base_price: true, total_rooms: true },
-        },
-      },
-    });
+    const user = await findUserById(prisma, params.user_id);
 
-    if (!property || property.room_types.length < 1) {
-      throw new AppError(404, "There's no such property or room with that id");
-    }
+    const property = await findPropertyAndRoomById(
+      prisma,
+      params.property_id,
+      params.room_type_id
+    );
+
     const roomType = property.room_types[0];
 
-    const pricing = await prisma.pricing.findMany({
-      where: {
-        room_type_id: roomType.id,
-        start_date: { lte: end },
-        end_date: { gte: start },
-      },
-      select: {
-        value: true,
-        type: true,
-        is_rentable: true,
-        start_date: true,
-        end_date: true,
-      },
-      orderBy: { start_date: "asc" },
-    });
+    const pricing = await findRoomPricingsByRange(
+      prisma,
+      roomType.id,
+      start,
+      end
+    );
 
     const response = await prisma.$transaction(async (tx) => {
+      const days = await ensureRows(
+        tx,
+        roomType.total_rooms,
+        roomType.id,
+        start,
+        end
+      );
+
+      await checkRoomAvailibility(tx, days, roomType.id, 1);
+
       const checkPrice = roomPriceCalculator(
         new Decimal(roomType.base_price),
         start,
@@ -57,36 +75,35 @@ export async function CreateTransactionService(params: ICreateTransaction) {
       );
 
       const { nights, totalPrice } = checkPrice;
+
+      const addOnsList: IAddOn[] = await addOnValidator(
+        tx,
+        params.add_on,
+        property.id
+      );
+
       const grandTotal = roomAndAddOnsCalculator(
         totalPrice,
         nights,
-        params.add_on
+        addOnsList
       );
 
-      const transaction = await tx.transaction.create({
-        data: {
-          user_id: params.user_id,
-          property_id: property.id,
-          room_type_id: roomType.id,
-          amount: grandTotal,
-          special_request: params.special_request || null,
-          status: "WAITING_FOR_PAYMENT",
-          start_date: start,
-          end_date: end,
-          expired_at: new Date(Date.now() + 60 * 60 * 1000),
-        },
-      });
+      const transaction = await createTransaction(
+        tx,
+        user.id,
+        property.id,
+        roomType.id,
+        grandTotal,
+        start,
+        end,
+        params.special_request
+      );
 
       if (params.add_on.length > 0) {
-        await tx.transaction_AddOn.createMany({
-          data: params.add_on.map((a) => ({
-            transaction_id: transaction.id,
-            add_on_id: a.id,
-            unit_price: a.price,
-          })),
-        });
+        await createManyAddOnTransactions(tx, transaction.id, addOnsList);
       }
 
+      //gak dimodularin karena cuma sekali pake
       const data = await tx.transaction.findFirst({
         where: {
           id: transaction.id,
@@ -98,11 +115,73 @@ export async function CreateTransactionService(params: ICreateTransaction) {
         },
       });
 
-      return data;
+      await updateHoldByRange(tx, days, roomType.id, 1);
+
+      return { data, addOnsList };
     });
 
-    return response;
+    if (!response.data)
+      throw new AppError(400, "Bad Request: Transaction Failed");
+
+    const payload = {
+      guestName: (user.first_name, user.last_name),
+      guestEmail: user.email,
+      grandTotal: response.data.amount,
+      checkIn: start.toISOString().slice(0, 10),
+      checkOut: end.toISOString().slice(0, 10),
+      roomType: response.data.room_type.name,
+      addons: response.addOnsList,
+    };
+
+    return payload;
   } catch (err) {
     throw err;
   }
 }
+
+// export async function UploadPaymentProof(params: IUploadPaymentProof) {
+//   let payment_proof: string = "";
+//   if (params.file) {
+//     const { secure_url } = await cloudinaryUpload(params.file);
+//   }
+
+//   try {
+//     const user = await findUserById(prisma, params.user_id);
+//     if (!user) throw new AppError(404, "No user with that id");
+
+//     const response = await prisma.transaction.update({
+//       where: {
+//         id: params.transaction_id,
+//         user_id: user.id,
+//       },
+//       data: {
+//         payment_proof,
+//       },
+//     });
+
+//     if (!response) throw new AppError(404, "We cant find your transaction");
+//     return response;
+//   } catch (err) {
+//     throw err;
+//   }
+// }
+
+// export async function UpdatePaymentStatus(params: IUpdatePaymentStatus) {
+//   try {
+//     const transaction = await updateTransactionStatus(
+//       prisma,
+//       params.transaction_id,
+//       params.owner_id,
+//       params.status
+//     );
+
+//     const days = enumerateNights(transaction.start_date, transaction.end_date);
+
+//     if (transaction.status === "PAID")
+//       await moveHoldToBookedByRange(prisma, days, transaction.room_type_id, 1);
+
+//     if(transaction.status === "CANCELED")
+//   } catch (err) {
+//     throw err;
+//   }
+// }

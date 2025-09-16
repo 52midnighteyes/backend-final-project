@@ -1,9 +1,10 @@
 import { Decimal } from "@prisma/client/runtime/library";
+import { IAddOn } from "../Interfaces/transactions.Interface";
 
 export function roomAndAddOnsCalculator(
   roomTotal: Decimal,
   nights: number,
-  addOns: { id: string; name: string; price: Decimal }[]
+  addOns: IAddOn[]
 ) {
   const addOnTotal = addOns.reduce(
     (acc, curr) => acc.plus(curr.price.mul(nights)),

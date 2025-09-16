@@ -1,5 +1,5 @@
 import { Decimal } from "@prisma/client/runtime/library";
-import { IPricing } from "../interfaces/transactions-interface";
+import { IPricing } from "../Interfaces/transactions.Interface";
 import { AppError } from "../classes/appError.class";
 
 export function toMidnight(date: Date) {

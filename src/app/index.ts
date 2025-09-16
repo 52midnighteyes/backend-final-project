@@ -5,7 +5,8 @@ import { FE_URL } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 
-import AddOnRouter from "./routers/add-ons-routers";
+import AddOnRouter from "./routers/add-ons.router";
+import TransactionRouter from "./routers/transactions.router";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get("/", (req: Request, res: Response, next: NextFunction) => {
 //EndPoint
 
 app.use("/api/add-ons", AddOnRouter);
+app.use("/api/transactions", TransactionRouter);
 
 //ErrorHandler
 
