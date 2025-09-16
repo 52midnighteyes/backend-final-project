@@ -125,23 +125,10 @@ model Transaction_AddOn {
 
 }
 
-model Transaction_AddOn {
-  id             String      @id @default(uuid())
-  transaction_id String
-  add_on_id      String
-  unit_price     Decimal
-  created_at     DateTime    @default(now())
-  add_on         Add_On      @relation(fields: [add_on_id], references: [id])
-  transaction    Transaction @relation(fields: [transaction_id], references: [id])
-
-  @@unique([transaction_id, add_on_id])
-  @@map("Transaction_AddOns")
-}
 
 model Pricing {
   id             String           @id @default(uuid())
   value          Decimal
-  priority_level Pricing_priority
   type Pricing_type
   
   is_rentable Boolean @default(true)
@@ -150,6 +137,7 @@ model Pricing {
   end_date DateTime
 
   created_at DateTime @default(now())
+  room_type_id String
 
   room_type Room_Type @relation(fields: [room_type_id], references: [id])
 
@@ -207,6 +195,8 @@ model Room_Type {
   bed_type           Bed_Type             @relation(fields: [bed_type_id], references: [id])
   property           Property             @relation(fields: [property_id], references: [id])
   transactions       Transaction[]
+  pricings Pricing[]
+  facilities Room_Type_Facility[]
 
   @@map("Room_Types")
 }
@@ -300,19 +290,12 @@ model Temporary_Token {
   @@map("Temporary_Tokens")
 }
 
-model Availability_Daily {
-  room_type_id String
-  date         DateTime
-  total_rooms  Int
-  held_count   Int       @default(0)
-  booked_count Int       @default(0)
-  updated_at   DateTime  @updatedAt
-  room_type    Room_Type @relation(fields: [room_type_id], references: [id])
-
-  @@id([room_type_id, date])
-  @@index([date])
-  @@map("Availability_Daily")
+enum Temporary_Token_Type {
+  RESET_PASSWORD
+  RESET_EMAIL
+  FORGOT_PASSWORD
 }
+
 
 enum User_Role {
   USER
