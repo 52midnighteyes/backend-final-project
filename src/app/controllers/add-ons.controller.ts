@@ -6,7 +6,7 @@ import {
 import {
   ICreateAddOnsParams,
   IGetAllAddOnsParams,
-} from "../interfaces/add-ons-interface";
+} from "../Interfaces/add-ons.interface";
 
 export async function CreateAddOnController(
   req: Request,

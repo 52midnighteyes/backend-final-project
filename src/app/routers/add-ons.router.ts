@@ -2,13 +2,14 @@ import Router from "express";
 import {
   CreateAddOnController,
   GetAllAddOnController,
-} from "../controllers/add-ons-controller";
-import TokenVerification from "../middlewares/tokenValidator";
-import { ZodValidator } from "../middlewares/zodValidator";
+} from "../controllers/add-ons.controller";
+import TokenVerification from "../middlewares/tokenValidator.middleware";
+
+import ZodValidator from "../middlewares/zodValidator.middleware";
 import {
   CreateAddOnSchema,
   GetAllAddOnSchema,
-} from "../schemas/add-ons-schemas";
+} from "../schemas/add-ons.schemas";
 
 const router = Router();
 

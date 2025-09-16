@@ -8,9 +8,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-import AddOnRouter from "./routers/add-ons-routers";
-import AuthRouter from "./routers/auth.router";
-
+import AddOnRouter from "./routers/add-ons.router";
+import TransactionRouter from "./routers/transactions.router";
 
 
 const app = express();
@@ -39,11 +38,14 @@ app.get("/", (req: Request, res: Response, next: NextFunction) => {
 //EndPoint
 
 app.use("/api/add-ons", AddOnRouter);
+
+app.use("/api/transactions", TransactionRouter);
 app.use("/api/auth", AuthRouter);
 
 app.get("/api/ping", (req, res) => {
   res.json({ message: "pong" });
 });
+
 
 //ErrorHandler
 

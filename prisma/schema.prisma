@@ -78,30 +78,51 @@ model Reservation {
 }
 
 model Transaction {
-  id                  String              @id @unique @default(uuid())
-  user_id             String
-  amount              Decimal
-  payment_proof       String?
-  status              Transaction_Status
-  start_date          DateTime
-  end_date            DateTime
-  created_at          DateTime            @default(now())
-  expired_at          DateTime?
-  room_type_id        String
-  special_request     String?
-  property_id         String
-  reservation         Reservation?
+  id String @id @unique @default(uuid())
+  user_id String
+  property_id String
+  room_type_id String
+  amount Decimal
+  special_request String?
+  payment_proof String?
+  status Transaction_Status
+
+  start_date DateTime
+  end_date DateTime
+
+  created_at DateTime @default(now())
+  expired_at DateTime?
+
+  reservation Reservation?
+  property Property @relation(fields: [property_id], references: [id])
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
+  user User @relation(fields: [user_id], references: [id])
   transaction_add_ons Transaction_AddOn[]
-  property            Property            @relation(fields: [property_id], references: [id])
-  room_type           Room_Type           @relation(fields: [room_type_id], references: [id])
-  user                User                @relation(fields: [user_id], references: [id])
+
+
+  @@map("Transactions")
 
   @@index([room_type_id])
   @@index([status])
   @@index([expired_at])
   @@index([start_date])
   @@index([end_date])
-  @@map("Transactions")
+}
+
+model Transaction_AddOn {
+  id String @id @default(uuid())
+  transaction_id String
+  add_on_id String
+
+  unit_price Decimal  
+  created_at DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transaction_id], references: [id])
+  add_on Add_On @relation(fields: [add_on_id], references: [id])
+
+  @@unique([transaction_id, add_on_id]) 
+  @@map("Transaction_AddOns")
+
 }
 
 model Transaction_AddOn {
@@ -121,15 +142,19 @@ model Pricing {
   id             String           @id @default(uuid())
   value          Decimal
   priority_level Pricing_priority
-  is_rentable    Boolean          @default(true)
-  start_date     DateTime
-  end_date       DateTime
-  created_at     DateTime         @default(now())
-  room_type_id   String
-  type           Pricing_type
-  room_type      Room_Type        @relation(fields: [room_type_id], references: [id])
+  type Pricing_type
+  
+  is_rentable Boolean @default(true)
 
-  @@map("Pricings")
+  start_date DateTime
+  end_date DateTime
+
+  created_at DateTime @default(now())
+
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
+
+@@map("Pricings")
+
 }
 
 model Review {
@@ -163,18 +188,21 @@ model Bed_Type {
 }
 
 model Room_Type {
-  id                 String               @id @unique @default(uuid())
-  name               String
-  description        String
-  capacity           Int
-  base_price         Int
-  size               Decimal
-  bed_type_id        String
-  property_id        String
-  total_rooms        Int
-  availabilities     Availability_Daily[]
-  pricings           Pricing[]
-  facilities         Room_Type_Facility[]
+  id String @id @unique @default(uuid())
+  name String
+  description String
+  capacity Int
+  base_price Int
+  size Decimal
+
+  total_rooms Int
+
+
+  bed_type_id String
+  property_id String
+
+  availabilities Availability_Daily[] 
+
   room_type_pictures Room_Type_Picture[]
   bed_type           Bed_Type             @relation(fields: [bed_type_id], references: [id])
   property           Property             @relation(fields: [property_id], references: [id])
@@ -184,13 +212,15 @@ model Room_Type {
 }
 
 model Add_On {
-  id                  String              @id @default(uuid())
-  property_id         String
-  name                String
-  description         String
-  price               Decimal
-  property            Property            @relation(fields: [property_id], references: [id])
-  transaction_add_ons Transaction_AddOn[]
+  id String @id @default(uuid())
+  property_id String
+  name String
+  description String
+  price Decimal
+
+  property Property @relation(fields: [property_id], references: [id])
+   transaction_add_ons Transaction_AddOn[]
+
 
   @@map("Add_Ons")
 }
@@ -303,15 +333,18 @@ enum Pricing_type {
   PERCENTAGE
 }
 
-enum Pricing_priority {
-  HIGH
-  MEDIUM
-  LOW
-}
+model Availability_Daily {
+  room_type_id String
+  date DateTime   
+  total_rooms Int
+  held_count Int @default(0)  
+  booked_count Int @default(0)
+  updated_at DateTime @updatedAt
 
-enum Temporary_Token_Type {
-  RESET_PASSWORD
-  RESET_EMAIL
-  FORGOT_PASSWORD
-  
+  room_type Room_Type @relation(fields: [room_type_id], references: [id])
+
+  @@id([room_type_id, date])
+  @@index([date])
+  @@map("Availability_Daily")
+
 }
