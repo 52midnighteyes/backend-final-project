@@ -283,10 +283,10 @@ model City {
 model Temporary_Token {
   id         String               @id @default(uuid())
   token      String               @unique
-  user_id    String
+  user_id    String?
   expired_at DateTime
   type       Temporary_Token_Type
-  user       User                 @relation(fields: [user_id], references: [id])
+  user       User?                 @relation(fields: [user_id], references: [id])
 
   @@map("Temporary_Tokens")
 }
