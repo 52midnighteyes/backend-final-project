@@ -10,7 +10,7 @@ dotenv.config();
 
 import AddOnRouter from "./routers/add-ons.router";
 import TransactionRouter from "./routers/transactions.router";
-
+import AuthRouter from "./routers/auth.router";
 
 const app = express();
 
@@ -45,7 +45,6 @@ app.use("/api/auth", AuthRouter);
 app.get("/api/ping", (req, res) => {
   res.json({ message: "pong" });
 });
-
 
 //ErrorHandler
 

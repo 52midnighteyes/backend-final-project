@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { CreateTransactionService } from "../services/transactions-services";
-import { ICreateTransaction } from "../Interfaces/transactions.Interface";
+import { ICreateTransaction } from "../interfaces/transactions.interface";
 
 export async function CreateTransactionController(
   req: Request,

@@ -1,5 +1,5 @@
 import { Decimal } from "@prisma/client/runtime/library";
-import { IAddOn } from "../Interfaces/transactions.Interface";
+import { IAddOn } from "../interfaces/transactions.interface";
 
 export function roomAndAddOnsCalculator(
   roomTotal: Decimal,

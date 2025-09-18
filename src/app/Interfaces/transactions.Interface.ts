@@ -3,6 +3,7 @@ import { Pricing_type, Transaction_Status } from "@prisma/client";
 
 export interface ICreateTransaction {
   user_id: string;
+  transaction_id: string;
   property_id: string;
   room_type_id: string;
   special_request: string;
@@ -38,3 +39,11 @@ export interface IUpdatePaymentStatus {
 }
 
 export type TransactionStatus = Transaction_Status;
+
+export interface ICreateOnGoingTransaction {
+  user_id: string;
+  start_date: Date;
+  end_date: Date;
+  property_id: string;
+  room_type_id: string;
+}

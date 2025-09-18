@@ -1,18 +1,38 @@
 import { Router } from "express";
+import ZodValidator from "../middlewares/zodValidator.middleware";
 import {
-  loginController,
+  completeRegisterSchema,
+  loginSchema,
+  registerSchema,
+} from "../schemas/auth.schema";
+import {
+  completeRegisterController,
   registerController,
-  setPasswordController,
-  verifyEmailController,
-} from "../controllers/auth-controller";
-
+  tenantLoginController,
+  userLoginController,
+} from "../controllers/auth.controller";
 
 const router = Router();
 
-router.post("/login", loginController);
-router.post("/register", registerController);
-router.get("/verify", verifyEmailController);
-router.post("/setpassword", setPasswordController);
-
+router.post(
+  "/user-login",
+  ZodValidator(loginSchema, "body"),
+  userLoginController
+);
+router.post(
+  "/tenant-login",
+  ZodValidator(loginSchema, "body"),
+  tenantLoginController
+);
+router.post(
+  "/register",
+  ZodValidator(registerSchema, "body"),
+  registerController
+);
+router.post(
+  "/complete-registration",
+  ZodValidator(completeRegisterSchema, "body"),
+  completeRegisterController
+);
 
 export default router;

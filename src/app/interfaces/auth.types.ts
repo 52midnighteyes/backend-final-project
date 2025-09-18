@@ -1,32 +1,29 @@
+import { User_Role } from "@prisma/client";
+import { Jwt, JwtPayload } from "jsonwebtoken";
 export type UserRole = "USER" | "TENANT" | "ADMIN";
 
-export interface ILoginParam {
-  role?: UserRole;
+export interface ILoginParams {
   email: string;
   password: string;
 }
 
-export interface IRegisterParam {
-  id?: string;
+export interface ICompleteRegisterParams {
+  token: string;
   email: string;
-  role?: UserRole;
-  isVerified: false;
-}
-
-export interface ICompleteProfileParam {
-  id?: string;
-  role: UserRole;
   first_name: string;
   last_name: string;
+  role: User_Role;
   password: string;
-  phone_number?: number;
 }
 
-export interface IJwtPayload {
-  id: string;
-  email: string;
-  role: "USER" | "TENANT" | "ADMIN";
+export interface ICompleteRegisterControllerParams {
+  token: string;
   first_name: string;
   last_name: string;
-  avatar: string | null;
+  role: User_Role;
+  password: string;
+}
+
+export interface IDecodePayload extends JwtPayload {
+  email: string;
 }
