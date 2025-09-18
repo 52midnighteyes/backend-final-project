@@ -261,22 +261,24 @@ model Country {
 }
 
 model Province {
-  id         String  @id @default(uuid())
+  id         String   @id @default(uuid())
   name       String
   country_id String
   cities     City[]
-  country    Country @relation(fields: [country_id], references: [id])
+  country    Country  @relation(fields: [country_id], references: [id])
 
+  @@unique([country_id, name], name: "country_id_name") // buat upsert
   @@map("Provinces")
 }
 
 model City {
-  id          String     @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   province_id String
-  province    Province   @relation(fields: [province_id], references: [id])
-  properties  Property[]
+  province    Province  @relation(fields: [province_id], references: [id])
+  properties Property[]
 
+  @@unique([province_id, name], name: "province_id_name") // buat upsert
   @@map("Cities")
 }
 
