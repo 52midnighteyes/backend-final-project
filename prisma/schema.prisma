@@ -44,6 +44,7 @@ model Property {
   slug         String             @unique
   deleted_at   DateTime?
   user_id      String
+  header_photo      String?
   add_ons      Add_On[]
   category     Category           @relation(fields: [category_id], references: [id])
   city         City               @relation(fields: [city_id], references: [id])
