@@ -21,7 +21,7 @@ router.post(
   CreateAddOnController
 );
 router.get(
-  "/",
+  "/:room_type_id",
   ZodValidator(GetAllAddOnSchema, "params"),
   GetAllAddOnController
 );

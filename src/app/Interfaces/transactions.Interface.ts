@@ -4,11 +4,7 @@ import { Pricing_type, Transaction_Status } from "@prisma/client";
 export interface ICreateTransaction {
   user_id: string;
   transaction_id: string;
-  property_id: string;
-  room_type_id: string;
   special_request: string;
-  start_date: Date;
-  end_date: Date;
   add_on: IAddOn[];
 }
 
@@ -32,7 +28,7 @@ export interface IUploadPaymentProof {
   file: Express.Multer.File;
 }
 
-export interface IUpdatePaymentStatus {
+export interface IConfirmPayment {
   owner_id: string;
   transaction_id: string;
   status: TransactionStatus;

@@ -4,9 +4,6 @@ import cors from "cors";
 import { FE_URL } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 import AddOnRouter from "./routers/add-ons.router";
 import TransactionRouter from "./routers/transactions.router";
@@ -14,7 +11,7 @@ import AuthRouter from "./routers/auth.router";
 
 const app = express();
 
-const corsOrigin = "http://localhost:3000";
+const corsOrigin = FE_URL;
 
 app.use(express.json());
 app.use(
@@ -24,6 +21,19 @@ app.use(
   })
 );
 app.use(helmet());
+
+app.use((req, res, next) => {
+  console.log("===== Incoming Request =====");
+  console.log("Time     :", new Date().toISOString());
+  console.log("Method   :", req.method);
+  console.log("URL      :", req.originalUrl);
+  console.log("Headers  :", req.headers);
+  console.log("Body     :", req.body);
+  console.log("Query    :", req.query);
+  console.log("============================\n");
+
+  next();
+});
 
 app.get("/", (req: Request, res: Response, next: NextFunction) => {
   try {

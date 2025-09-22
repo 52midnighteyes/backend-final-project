@@ -81,6 +81,8 @@ export async function checkRoomAvailibility(
         throw new AppError(422, `Not enough rooms on ${ds}`);
       }
     }
+
+    return;
   } catch (err) {
     throw err;
   }
@@ -106,7 +108,7 @@ export async function updateHoldByRange(
 }
 
 //-> KALO TRANSAKSI BERHASIL LANGSUNG UPDATE
-export async function moveHoldToBookedByRange(
+export async function addBookedRoom(
   db: Db,
   days: Date[],
   room_type_id: string,
@@ -117,7 +119,6 @@ export async function moveHoldToBookedByRange(
       await db.availability_Daily.update({
         where: { room_type_id_date: { room_type_id, date: day } },
         data: {
-          held_count: { decrement: qty },
           booked_count: { increment: qty },
         },
       });
@@ -155,6 +156,7 @@ export async function addOnValidator(
   property_id: string
 ): Promise<IAddOn[]> {
   try {
+    console.log("ini addon->", addOns);
     if (!addOns || addOns.length === 0) return [];
 
     const addOnIds = addOns.map((a) => a.id);
@@ -275,6 +277,7 @@ export async function createManyAddOnTransactions(
   addOns: IAddOn[]
 ) {
   try {
+    if (addOns.length === 0) return [];
     const data = await db.transaction_AddOn.createMany({
       data: addOns.map((a) => ({
         transaction_id,
@@ -329,6 +332,32 @@ export async function updateTransactionStatus(
     });
 
     return transaction;
+  } catch (err) {
+    throw err;
+  }
+}
+
+//find transaction and tx owner
+
+export async function findTransactionById(
+  db: Db,
+  transaction_id: string,
+  user_id: string
+) {
+  try {
+    const response = await db.transaction.findUnique({
+      where: {
+        id: transaction_id,
+        user_id,
+      },
+      include: {
+        room_type: true,
+      },
+    });
+
+    if (!response) throw new AppError(404, "No transaction found");
+
+    return response;
   } catch (err) {
     throw err;
   }
