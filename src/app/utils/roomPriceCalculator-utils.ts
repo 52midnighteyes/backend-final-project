@@ -2,9 +2,18 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { IPricing } from "../interfaces/transactions.interface";
 import { AppError } from "../classes/appError.class";
 
-export function toMidnight(date: Date) {
+export function toMidnight(input: string | Date): Date {
+  const date = input instanceof Date ? input : new Date(input);
+
+  if (isNaN(date.getTime())) {
+    throw new AppError(
+      400,
+      "Invalid date format, use YYYY-MM-DD or ISO string"
+    );
+  }
+
   return new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   );
 }
 
