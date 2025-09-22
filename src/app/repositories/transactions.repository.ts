@@ -1,8 +1,9 @@
-import { Db } from "../Interfaces/prisma.types";
+import { Db } from "../interfaces/prisma.types";
+import { Transaction_Status } from "@prisma/client";
 import {
   IAddOn,
   TransactionStatus,
-} from "../Interfaces/transactions.Interface";
+} from "../interfaces/transactions.interface";
 import {
   enumerateNights,
   toMidnight,
@@ -53,13 +54,28 @@ export async function checkRoomAvailibility(
   room_type_id: string,
   qty: number
 ) {
+  const status: Transaction_Status[] = [
+    "WAITING_FOR_PAYMENT",
+    "WAITING_FOR_CONFIRMATION",
+    "ON_GOING",
+  ];
   try {
     const rows = await db.availability_Daily.findMany({
       where: { room_type_id, date: { in: days } },
     });
 
     for (const r of rows) {
-      const available = r.total_rooms - (r.booked_count + r.held_count);
+      const activeTxCount = await db.transaction.count({
+        where: {
+          room_type_id,
+          status: { in: status },
+          start_date: { lte: r.date },
+          end_date: { gt: r.date },
+        },
+      });
+
+      const available = r.total_rooms - (r.booked_count + activeTxCount);
+
       if (available < qty) {
         const ds = r.date.toISOString().slice(0, 10);
         throw new AppError(422, `Not enough rooms on ${ds}`);

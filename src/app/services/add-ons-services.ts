@@ -3,7 +3,7 @@ import { AppError } from "../classes/appError.class";
 import {
   ICreateAddOnsParams,
   IGetAllAddOnsParams,
-} from "../Interfaces/add-ons.interface";
+} from "../interfaces/add-ons.interface";
 
 export async function CreateAddOnService(params: ICreateAddOnsParams) {
   try {

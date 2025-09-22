@@ -3,11 +3,12 @@ import { AppError } from "../classes/appError.class";
 
 import {
   IAddOn,
+  ICreateOnGoingTransaction,
   ICreateTransaction,
   IPricing,
   IUpdatePaymentStatus,
   IUploadPaymentProof,
-} from "../Interfaces/transactions.Interface";
+} from "../interfaces/transactions.interface";
 import { roomAndAddOnsCalculator } from "../utils/calculatePrice-utils";
 import { Decimal } from "@prisma/client/runtime/library";
 import {
@@ -31,6 +32,49 @@ import {
 } from "../repositories/transactions.repository";
 import { error } from "console";
 import { cloudinaryUpload } from "../utils/cloudinary";
+import en from "zod/v4/locales/en.cjs";
+
+// ketika ketik transaksi, kita buat dulu ongoing transaction.
+export async function CreateOnGoingTransaction(
+  params: ICreateOnGoingTransaction
+) {
+  try {
+    const start = toMidnight(params.start_date);
+    const end = toMidnight(params.end_date);
+    if (end <= start)
+      throw new AppError(400, "end_date must be greater than start_date");
+
+    const nights = enumerateNights(start, end);
+
+    const user = await findUserById(prisma, params.user_id);
+
+    const property = await findPropertyAndRoomById(
+      prisma,
+      params.property_id,
+      params.room_type_id
+    );
+
+    const room_type = property.room_types[0];
+
+    await checkRoomAvailibility(prisma, nights, room_type.id, 1);
+
+    const transaction = await prisma.transaction.create({
+      data: {
+        user_id: params.user_id,
+        property_id: property.id,
+        room_type_id: room_type.id,
+        amount: room_type.base_price * nights.length, //temp price
+        status: "ON_GOING",
+        start_date: start,
+        end_date: end,
+      },
+    });
+
+    return transaction;
+  } catch (err) {
+    throw err;
+  }
+}
 
 export async function CreateTransactionService(params: ICreateTransaction) {
   try {
@@ -88,25 +132,20 @@ export async function CreateTransactionService(params: ICreateTransaction) {
         addOnsList
       );
 
-      const transaction = await createTransaction(
-        tx,
-        user.id,
-        property.id,
-        roomType.id,
-        grandTotal,
-        start,
-        end,
-        params.special_request
-      );
-
-      if (params.add_on.length > 0) {
-        await createManyAddOnTransactions(tx, transaction.id, addOnsList);
-      }
+      const updateTransaction = tx.transaction.update({
+        where: {
+          id: params.transaction_id,
+        },
+        data: {
+          amount: grandTotal,
+          special_request: params.special_request || null,
+        },
+      });
 
       //gak dimodularin karena cuma sekali pake
       const data = await tx.transaction.findFirst({
         where: {
-          id: transaction.id,
+          id: params.transaction_id,
         },
         include: {
           transaction_add_ons: true,
