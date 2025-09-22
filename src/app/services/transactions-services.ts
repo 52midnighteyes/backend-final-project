@@ -93,9 +93,9 @@ export async function createTransactionService(params: ICreateTransaction) {
       params.user_id
     );
 
-    // if (transaction.status !== "ON_GOING") {
-    //   throw new AppError(422, "Transaction status must be ON_GOING");
-    // }
+    if (transaction.status !== "ON_GOING") {
+      throw new AppError(422, "Transaction status must be ON_GOING");
+    }
 
     if (new Date(transaction.expired_at as Date) <= new Date(Date.now())) {
       throw new AppError(422, "Transaction has expired");
@@ -185,11 +185,6 @@ export async function uploadPaymentProofService(params: IUploadPaymentProof) {
   if (!params.file) throw new AppError(404, "No file found. try to reupload");
   try {
     const user = await findUserById(prisma, params.user_id);
-    const transaction = await findTransactionById(
-      prisma,
-      params.transaction_id,
-      user.id
-    );
 
     const { secure_url } = await cloudinaryUpload(params.file);
 
