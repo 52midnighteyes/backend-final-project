@@ -4,7 +4,7 @@ const SECRET = process.env.JWT_SECRET || "fallback_secret";
 
 export function signJwt(
   payload: string | Buffer | object,
-  expiresIn: SignOptions["expiresIn"] = "1d" // ✅ pakai tipe bawaan
+  expiresIn: SignOptions["expiresIn"] = "1d"
 ): string {
   const options: SignOptions = { expiresIn };
   return jwt.sign(payload, SECRET, options);

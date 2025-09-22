@@ -1,7 +1,6 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
-import { FE_URL } from "./configs/config";
 import { Response, Request, NextFunction } from "express";
 import { errorHandler } from "./middlewares/errorHandler.middleware";
 import dotenv from "dotenv";
@@ -10,6 +9,7 @@ dotenv.config();
 
 import AddOnRouter from "./routers/add-ons-routers";
 import AuthRouter from "./routers/auth.router";
+import propertiesRouter from "./routers/properties-routers";
 
 
 
@@ -40,10 +40,7 @@ app.get("/", (req: Request, res: Response, next: NextFunction) => {
 
 app.use("/api/add-ons", AddOnRouter);
 app.use("/api/auth", AuthRouter);
-
-app.get("/api/ping", (req, res) => {
-  res.json({ message: "pong" });
-});
+app.use("/api/properties", propertiesRouter);
 
 //ErrorHandler
 

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { transporter } from "../utils/mailer";
+import { transporter } from "../lib/mailer";
 import prisma from "../lib/prisma";
 import {
   findUserByEmail,

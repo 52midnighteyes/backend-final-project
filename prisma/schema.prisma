@@ -118,16 +118,15 @@ model Transaction_AddOn {
 }
 
 model Pricing {
-  id             String           @id @default(uuid())
-  value          Decimal
-  priority_level Pricing_priority
-  is_rentable    Boolean          @default(true)
-  start_date     DateTime
-  end_date       DateTime
-  created_at     DateTime         @default(now())
-  room_type_id   String
-  type           Pricing_type
-  room_type      Room_Type        @relation(fields: [room_type_id], references: [id])
+  id           String       @id @default(uuid())
+  value        Decimal
+  is_rentable  Boolean      @default(true)
+  start_date   DateTime
+  end_date     DateTime
+  created_at   DateTime     @default(now())
+  room_type_id String
+  type         Pricing_type
+  room_type    Room_Type    @relation(fields: [room_type_id], references: [id])
 
   @@map("Pricings")
 }
@@ -296,6 +295,8 @@ enum Transaction_Status {
   PAID
   CANCELED
   EXPIRED
+  ON_GOING
+  PAYMENT_PROOF_REJECTED
 }
 
 enum Pricing_type {
@@ -303,15 +304,9 @@ enum Pricing_type {
   PERCENTAGE
 }
 
-enum Pricing_priority {
-  HIGH
-  MEDIUM
-  LOW
-}
-
 enum Temporary_Token_Type {
   RESET_PASSWORD
   RESET_EMAIL
   FORGOT_PASSWORD
-  
+  REGISTRATION
 }
