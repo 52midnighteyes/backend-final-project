@@ -324,9 +324,27 @@ export async function confirmPaymentService(params: IConfirmPayment) {
 
 export async function getTransactionService(id: string) {
   try {
-    const transaction = findTranscationById(prisma, id);
+    const response = await findTranscationById(prisma, id);
+    const property = await findPropertyAndRoomById(
+      prisma,
+      response.property_id,
+      response.room_type_id
+    );
 
-    return transaction;
+    const roomType = property.room_types[0];
+
+    const payload = {
+      id: response.id,
+      property_name: property.name,
+      nights_total: response.nights_total,
+      room_type: roomType.name,
+      amount: response.amount,
+      start_date: response.start_date,
+      end_date: response.end_date,
+      expired_at: response.expired_at,
+    };
+
+    return payload;
   } catch (err) {
     throw err;
   }
