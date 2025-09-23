@@ -31,3 +31,7 @@ export const confirmTransactionSchema = z.object({
   transaction_id: z.uuid().nonempty(),
   status: z.enum(["PAID", "PAYMENT_PROOF_REJECTED"]).nonoptional(),
 });
+
+export const getTransactionSchema = z.object({
+  transaction_id: z.string().nonempty(),
+});

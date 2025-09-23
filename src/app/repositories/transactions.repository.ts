@@ -194,7 +194,7 @@ export async function findPropertyAndRoomById(
       include: {
         room_types: {
           where: { id: room_type_id },
-          select: { id: true, base_price: true, total_rooms: true },
+          select: { id: true, name: true, base_price: true, total_rooms: true },
         },
       },
     });
@@ -339,7 +339,7 @@ export async function updateTransactionStatus(
 
 //find transaction and tx owner
 
-export async function findTransactionById(
+export async function findUserTransactionById(
   db: Db,
   transaction_id: string,
   user_id: string
@@ -356,6 +356,22 @@ export async function findTransactionById(
     });
 
     if (!response) throw new AppError(404, "No transaction found");
+
+    return response;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function findTranscationById(db: Db, transaction_id: string) {
+  try {
+    const response = await db.transaction.findUnique({
+      where: {
+        id: transaction_id,
+      },
+    });
+
+    if (!response) throw new AppError(404, "transaction not found");
 
     return response;
   } catch (err) {
