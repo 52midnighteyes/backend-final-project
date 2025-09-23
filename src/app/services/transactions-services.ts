@@ -84,9 +84,6 @@ export async function createOnGoingTransactionService(
 
 export async function createTransactionService(params: ICreateTransaction) {
   try {
-    console.log("ini params", params);
-    console.log("ini addon di service ->", params.add_on);
-
     const transaction = await findTransactionById(
       prisma,
       params.transaction_id,
