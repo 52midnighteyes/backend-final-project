@@ -3,8 +3,9 @@ import {
   confirmPaymentService,
   createOnGoingTransactionService,
   createTransactionService,
+  getTransactionService,
   uploadPaymentProofService,
-} from "../services/transactions-services";
+} from "../services/transactions.services";
 import {
   IConfirmPayment,
   ICreateOnGoingTransaction,
@@ -99,6 +100,24 @@ export async function confirmPaymentController(
 
     res.status(200).json({
       message: "ok",
+      data: response,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getTransactionController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { transaction_id } = req.params;
+    const response = await getTransactionService(transaction_id);
+
+    res.status(200).json({
+      message: "data found",
       data: response,
     });
   } catch (err) {

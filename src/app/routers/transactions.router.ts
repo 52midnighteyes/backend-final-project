@@ -4,12 +4,14 @@ import ZodValidator from "../middlewares/zodValidator.middleware";
 import {
   confirmTransactionSchema,
   CreateOnGoingTransactionSchema,
+  getTransactionSchema,
   uploadPaymentProofSchema,
 } from "../schemas/transactions.schemas";
 import {
   confirmPaymentController,
   CreateOnGoingTransactionController,
   CreateTransactionController,
+  getTransactionController,
   uploadPaymentProofController,
 } from "../controllers/transactions.controller";
 import upload from "../middlewares/multer.middleware";
@@ -37,6 +39,12 @@ router.patch(
   "/payment-confirmation",
   ZodValidator(confirmTransactionSchema, "body"),
   confirmPaymentController
+);
+
+router.get(
+  "/:transaction_id",
+  ZodValidator(getTransactionSchema, "params"),
+  getTransactionController
 );
 
 export default router;

@@ -24,10 +24,11 @@ import {
   findRoomPricingsByRange,
   createManyAddOnTransactions,
   findUserById,
-  findTransactionById,
+  findUserTransactionById,
   updateTransactionStatus,
   addBookedRoom,
   ensureRows,
+  findTranscationById,
 } from "../repositories/transactions.repository";
 import { cloudinaryUpload } from "../utils/cloudinary";
 import path, { format } from "path";
@@ -37,7 +38,6 @@ import mailer from "../lib/nodemailer";
 import { formatTime } from "../utils/dateConverter.utils";
 import { en } from "zod/v4/locales";
 
-// ketika transaksi, kita buat dulu ongoing transaction.
 export async function createOnGoingTransactionService(
   params: ICreateOnGoingTransaction
 ) {
@@ -46,7 +46,7 @@ export async function createOnGoingTransactionService(
   if (end <= start)
     throw new AppError(400, "end_date must be greater than start_date");
 
-  const nights = enumerateNights(start, end);
+  const enumeratedNights = enumerateNights(start, end);
 
   try {
     const user = await findUserById(prisma, params.user_id);
@@ -55,28 +55,57 @@ export async function createOnGoingTransactionService(
       params.property_id,
       params.room_type_id
     );
-
     const room_type = property.room_types[0];
-    console.log("ini nihhh->", room_type);
 
     await ensureRows(prisma, room_type.total_rooms, room_type.id, start, end);
+    await checkRoomAvailibility(prisma, enumeratedNights, room_type.id, 1);
 
-    await checkRoomAvailibility(prisma, nights, room_type.id, 1);
+    const pricing = await findRoomPricingsByRange(
+      prisma,
+      room_type.id,
+      start,
+      end
+    );
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        user_id: params.user_id,
-        property_id: property.id,
-        room_type_id: room_type.id,
-        amount: room_type.base_price * nights.length,
-        status: "ON_GOING",
-        start_date: start,
-        end_date: end,
-        expired_at: new Date(Date.now() + 60 * 5 * 1000),
-      },
+    const { nights, totalPrice } = roomPriceCalculator(
+      new Decimal(room_type.base_price),
+      start,
+      end,
+      pricing
+    );
+
+    const grandTotal = roomAndAddOnsCalculator(totalPrice, nights);
+
+    const response = await prisma.$transaction(async (tx) => {
+      const transaction = await prisma.transaction.create({
+        data: {
+          user_id: params.user_id,
+          property_id: property.id,
+          room_type_id: room_type.id,
+          amount: grandTotal,
+          nights_total: nights,
+          status: "ON_GOING",
+          start_date: start,
+          end_date: end,
+          expired_at: new Date(Date.now() + 60 * 5 * 1000),
+        },
+      });
+
+      return transaction;
     });
 
-    return transaction;
+    const payload = {
+      id: response.id,
+      property_name: property.name,
+      nights_total: response.nights_total,
+      room_type: room_type.name,
+      amount: response.amount,
+      start_date: response.start_date,
+      end_date: response.end_date,
+      expired_at: response.expired_at,
+    };
+
+    return payload;
   } catch (err) {
     throw err;
   }
@@ -84,10 +113,16 @@ export async function createOnGoingTransactionService(
 
 export async function createTransactionService(params: ICreateTransaction) {
   try {
-    const transaction = await findTransactionById(
+    const transaction = await findUserTransactionById(
       prisma,
       params.transaction_id,
       params.user_id
+    );
+
+    const property = await findPropertyAndRoomById(
+      prisma,
+      transaction.property_id,
+      transaction.room_type_id
     );
 
     if (transaction.status !== "ON_GOING") {
@@ -100,24 +135,9 @@ export async function createTransactionService(params: ICreateTransaction) {
 
     const start = toMidnight(transaction.start_date);
     const end = toMidnight(transaction.end_date);
-    const roomType = transaction.room_type;
-
-    //cari pricing yang overlap dengan tanggal menginap
-    const pricing = await findRoomPricingsByRange(
-      prisma,
-      roomType.id,
-      start,
-      end
-    );
+    const roomType = property.room_types[0];
 
     const response = await prisma.$transaction(async (tx) => {
-      const { nights, totalPrice } = roomPriceCalculator(
-        new Decimal(roomType.base_price),
-        start,
-        end,
-        pricing
-      );
-
       const validAddOns = await addOnValidator(
         tx,
         params.add_on,
@@ -125,8 +145,8 @@ export async function createTransactionService(params: ICreateTransaction) {
       );
 
       const grandTotal = roomAndAddOnsCalculator(
-        totalPrice,
-        nights,
+        transaction.amount,
+        transaction.nights_total as number,
         validAddOns
       );
 
@@ -161,18 +181,18 @@ export async function createTransactionService(params: ICreateTransaction) {
       return { ...updateTransaction, addOns: params.add_on };
     });
 
-    const Payload = {
+    const payload = {
       id: response.id,
-      email: response.user.email,
-      total: response.amount,
-      room_type: response.room_type.name,
-      addons: response.addOns,
-      special_request: params.special_request,
-      check_in: start,
-      check_out: end,
+      property_name: property.name,
+      nights_total: response.nights_total,
+      room_type: roomType.name,
+      amount: response.amount,
+      start_date: response.start_date,
+      end_date: response.end_date,
+      expired_at: response.expired_at,
     };
 
-    return { ...Payload };
+    return payload;
   } catch (err) {
     throw err;
   }
@@ -297,6 +317,16 @@ export async function confirmPaymentService(params: IConfirmPayment) {
       return transaction;
     });
     return response;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function getTransactionService(id: string) {
+  try {
+    const transaction = findTranscationById(prisma, id);
+
+    return transaction;
   } catch (err) {
     throw err;
   }
