@@ -87,6 +87,7 @@ model Transaction {
   amount Decimal
   special_request String?
   payment_proof String?
+  nights_total Int?
   status Transaction_Status
 
   start_date DateTime
