@@ -96,6 +96,7 @@ export async function createOnGoingTransactionService(
 
     const payload = {
       id: response.id,
+      room_type_id: room_type.id,
       property_name: property.name,
       nights_total: response.nights_total,
       room_type: room_type.name,
@@ -183,6 +184,7 @@ export async function createTransactionService(params: ICreateTransaction) {
 
     const payload = {
       id: response.id,
+      room_type_id: roomType.id,
       property_name: property.name,
       nights_total: response.nights_total,
       room_type: roomType.name,
@@ -335,6 +337,7 @@ export async function getTransactionService(id: string) {
 
     const payload = {
       id: response.id,
+      room_type_id: roomType.id,
       property_name: property.name,
       nights_total: response.nights_total,
       room_type: roomType.name,
