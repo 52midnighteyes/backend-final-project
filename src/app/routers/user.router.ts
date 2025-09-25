@@ -1,32 +1,24 @@
-// import { Router } from "express";
-// import {
-//   createUserController,
-//   getUserDetailController,
-//   getUserByIdController,
-//   updateUserController,
-//   deleteUserController,
-//   getAllUsersController,
-// } from "../controllers/user-controller";
-// import { verifyToken } from "../middlewares/auth.middleware";
+import { Router } from "express";
+import tokenValidator from "../middlewares/tokenValidator.middleware";
+import ZodValidator from "../middlewares/zodValidator.middleware";
+import { updateUserProfileSchema } from "../schemas/user.schema";
+import {
+  getUserProfileController,
+  updateUserProfileController,
+  resendVerifyEmailController,
+  confirmVerifyEmailController,
+} from "../controllers/user-controller";
 
-// const router = Router();
+const router = Router();
 
-// // Get all users
-// router.get("/", verifyToken, getAllUsersController);
+router.get("/profile", tokenValidator, getUserProfileController);
+router.patch(
+  "/profile",
+  tokenValidator,
+  ZodValidator(updateUserProfileSchema, "body"),
+  updateUserProfileController
+);
+router.post("/verify-email", tokenValidator, resendVerifyEmailController);
+router.get("/verify-email/confirm", confirmVerifyEmailController);
 
-// // Create new user
-// router.post("/", createUserController);
-
-// // Get current user detail
-// router.get("/detail", verifyToken, getUserDetailController);
-
-// // Get user by ID
-// router.get("/:id", verifyToken, getUserByIdController);
-
-// // Update user
-// router.put("/:id", verifyToken, updateUserController);
-
-// // Delete user
-// router.delete("/:id", verifyToken, deleteUserController);
-
-// export default router;
+export default router;

@@ -1,77 +1,112 @@
-// import { Request, Response } from "express";
-// import * as userRepo from "../repositories/user.repository";
-// import prisma from "../lib/prisma";
+import { Request, Response, NextFunction } from "express";
+import {
+  getUserProfileService,
+  updateUserProfileService,
+  resendVerifyEmailService,
+  confirmVerifyEmailService,
+} from "../services/user.services";
+import {
+  IUpdateUserProfileParams,
+  IConfirmVerifyEmailParams,
+} from "../interfaces/user.types";
+import { AppError } from "../classes/appError.class";
 
-// export async function getAllUsersController(req: Request, res: Response) {
+// GET /user/profile
+export async function getUserProfileController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+    const userId: string = req.user.id;
+    const user = await getUserProfileService(userId);
+    res.status(200).json({ data: user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// PATCH /user/profile
+export async function updateUserProfileController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+    const userId: string = req.user.id;
+    const params: IUpdateUserProfileParams = req.body;
+    const updated = await updateUserProfileService(userId, params);
+    res.status(200).json({ message: "Profile updated", data: updated });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /user/verify-email
+export async function resendVerifyEmailController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.user) {
+      throw new AppError(401, "Unauthorized");
+    }
+    const userId: string = req.user.id;
+    const response = await resendVerifyEmailService(userId);
+    res.status(200).json(response);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /user/verify-email/confirm
+export async function confirmVerifyEmailController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const params: IConfirmVerifyEmailParams = {
+      token: req.query.token as string,
+    };
+    const message = await confirmVerifyEmailService(params);
+    res.status(200).json({ message });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// // POST /api/user/change-password
+// export const changePassword = async (req: Request, res: Response) => {
 //   try {
-//     const users = await userRepo.getAllUsers();
-//     return res.status(200).json(users);
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// }
+//     const userId = req.user.id; 
+//     const { oldPassword, newPassword } = req.body;
 
-// export async function getUserByIdController(req: Request, res: Response) {
-//   try {
-//     const user = await userRepo.getUserById(req.params.id);
-//     if (!user) return res.status(404).json({ message: "User not found" });
-//     return res.status(200).json(user);
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
-//   }
-// }
+//     const user = await db.user.findUnique({ where: { id: userId } });
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
 
-// export async function createUserController(req: Request, res: Response) {
-//   try {
-//     const createdUser = await userRepo.createUser(req.body);
-//     return res.status(201).json(createdUser);
-//   } catch (error: any) {
-//     return res.status(400).json({ message: error.message });
-//   }
-// }
+//     const isValid = await bcrypt.compare(oldPassword, user.password);
+//     if (!isValid) {
+//       return res.status(400).json({ message: "Password lama salah" });
+//     }
 
-// export async function updateUserController(req: Request, res: Response) {
-//   try {
-//     const updatedUser = await userRepo.updateUser(req.params.id, req.body);
-//     return res.status(200).json(updatedUser);
-//   } catch (error: any) {
-//     return res.status(400).json({ message: error.message });
-//   }
-// }
-
-// export async function deleteUserController(req: Request, res: Response) {
-//   try {
-//     await userRepo.deleteUser(req.params.id);
-//     return res.status(204).send();
-//   } catch (error: any) {
-//     return res.status(400).json({ message: error.message });
-//   }
-// }
-
-// // User Details
-// export async function getUserDetailController(req: Request, res: Response) {
-//   try {
-//     const userId = (req as any).user.id;
-
-//     const user = await prisma.user.findUnique({
+//     const hashed = await bcrypt.hash(newPassword, 10);
+//     await db.user.update({
 //       where: { id: userId },
-//       select: {
-//         id: true,
-//         name: true,
-//         email: true,
-//         role: true,
-//         referralCode: true,
-//         pointsBalance: true,
-//         profilePic: true,
-//         createdAt: true,
-//         updatedAt: true,
-//       },
+//       data: { password: hashed },
 //     });
 
-//     if (!user) return res.status(404).json({ message: "User not found" });
-
-//     return res.status(200).json(user);
-//   } catch (error: any) {
-//     return res.status(500).json({ message: error.message });
+//     return res.json({ message: "Password berhasil diubah" });
+//   } catch (err) {
+//     return res.status(500).json({ message: "Gagal mengubah password" });
 //   }
-// }
+// };

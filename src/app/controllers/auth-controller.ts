@@ -1,64 +1,122 @@
+import { Request, Response, NextFunction } from "express";
 import {
-  loginService,
+  completeRegisterService,
   registerService,
-  verifyEmailService,
-  setPasswordService,
+  tenantLoginService,
+  userLoginService,
+  resetPasswordService,
+  confirmResetPasswordService,
 } from "../services/auth.services";
-import { Request, Response } from "express";
+import {
+  ICompleteRegisterControllerParams,
+  ICompleteRegisterParams,
+  IDecodePayload,
+  ILoginParams,
+  IResetPasswordParams,
+  IConfirmResetPasswordParams,
+} from "../interfaces/auth.types";
+import { verify, TokenExpiredError, JsonWebTokenError } from "jsonwebtoken";
+import { SECRET_KEY } from "../configs/config";
+import { AppError } from "../classes/appError.class";
 
-export async function loginController(req: Request, res: Response) {
+// Register
+export async function registerController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const { user, token } = await loginService(req.body);
-    res.json({
-      status: true,
-      message: "Login successful",
-      data: { user, token },
-    });
-  } catch (err: any) {
-    res.status(400).json({ status: false, message: err.message });
+    const { email } = req.body;
+    const response = await registerService(email);
+    res.status(201).json({ message: response });
+  } catch (err) {
+    next(err);
   }
 }
 
-export async function registerController(req: Request, res: Response) {
+// User Login
+export async function userLoginController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const user = await registerService(req.body);
-    res.json({
-      status: true,
-      message: "Registration successful, check your email for verification",
-      data: { user },
-    });
-  } catch (err: any) {
-    res.status(400).json({ status: false, message: err.message });
+    const data = req.body as ILoginParams;
+    const response = await userLoginService(data);
+    res.status(200).json({ message: "Login Success", data: response });
+  } catch (err) {
+    next(err);
   }
 }
 
-export async function verifyEmailController(req: Request, res: Response) {
+// Tenant Login
+export async function tenantLoginController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const { token } = req.query;
-    if (!token)
-      return res
-        .status(400)
-        .json({ status: false, message: "Token diperlukan" });
-
-    const result = await verifyEmailService(String(token));
-    res.json({ status: true, ...result });
-  } catch (err: any) {
-    res.status(400).json({ status: false, message: err.message });
+    const data = req.body as ILoginParams;
+    const response = await tenantLoginService(data);
+    res.status(200).json({ message: "Login Success", data: response });
+  } catch (err) {
+    next(err);
   }
 }
 
-export async function setPasswordController(req: Request, res: Response) {
+// Complete Register
+export async function completeRegisterController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const { token, password } = req.body;
-    if (!token || !password) {
-      return res
-        .status(400)
-        .json({ status: false, message: "Token & password wajib diisi" });
+    const data = req.body as ICompleteRegisterControllerParams;
+    const decoded = verify(data.token, SECRET_KEY as string) as IDecodePayload;
+    const email = decoded.email;
+    const response = await completeRegisterService({
+      ...data,
+      email,
+    } as ICompleteRegisterParams);
+
+    res.status(201).json({ message: response });
+  } catch (err) {
+    if (err instanceof TokenExpiredError) {
+      return next(new AppError(410, "Registration token expired"));
     }
+    if (err instanceof JsonWebTokenError) {
+      return next(new AppError(400, "Invalid registration token"));
+    }
+    next(err);
+  }
+}
 
-    const result = await setPasswordService(token, password);
-    res.json({ status: true, ...result });
-  } catch (err: any) {
-    res.status(400).json({ status: false, message: err.message });
+// Reset Password Request
+export async function resetPasswordController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const params: IResetPasswordParams = req.body;
+    const response = await resetPasswordService(params);
+    res.status(200).json({ message: response });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Confirm Reset Password
+export async function confirmResetPasswordController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const params: IConfirmResetPasswordParams = req.body;
+    const response = await confirmResetPasswordService(params);
+    res.status(200).json({ message: response });
+  } catch (err) {
+    next(err);
   }
 }

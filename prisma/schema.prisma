@@ -43,6 +43,7 @@ model Property {
   slug         String             @unique
   deleted_at   DateTime?
   user_id      String
+  header_photo String?
   add_ons      Add_On[]
   category     Category           @relation(fields: [category_id], references: [id])
   city         City               @relation(fields: [city_id], references: [id])
@@ -90,6 +91,7 @@ model Transaction {
   room_type_id        String
   special_request     String?
   property_id         String
+  nights_total        Int?
   reservation         Reservation?
   transaction_add_ons Transaction_AddOn[]
   property            Property            @relation(fields: [property_id], references: [id])
@@ -245,6 +247,7 @@ model Province {
   cities     City[]
   country    Country @relation(fields: [country_id], references: [id])
 
+  @@unique([country_id, name])
   @@map("Provinces")
 }
 
@@ -255,16 +258,17 @@ model City {
   province    Province   @relation(fields: [province_id], references: [id])
   properties  Property[]
 
+  @@unique([province_id, name])
   @@map("Cities")
 }
 
 model Temporary_Token {
   id         String               @id @default(uuid())
   token      String               @unique
-  user_id    String
+  user_id    String?
   expired_at DateTime
   type       Temporary_Token_Type
-  user       User                 @relation(fields: [user_id], references: [id])
+  user       User?                @relation(fields: [user_id], references: [id])
 
   @@map("Temporary_Tokens")
 }

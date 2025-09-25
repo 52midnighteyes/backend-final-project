@@ -1,117 +1,305 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import { transporter } from "../lib/mailer";
+import { sign } from "jsonwebtoken";
+import bcrypt, { genSalt, hash } from "bcrypt";
+import path from "path";
+import fs from "fs/promises";
 import prisma from "../lib/prisma";
 import {
   findUserByEmail,
-  registerUser,
-  saveTemporaryToken,
+  createTemporaryToken,
   findTemporaryToken,
+  isUserExists,
+  createNewUser,
   deleteTemporaryToken,
+  updateUserPassword,
 } from "../repositories/auth.repository";
 
-import { ILoginParam, IRegisterParam } from "../interfaces/auth.types";
+import {
+  ICompleteRegisterParams,
+  ILoginParams,
+  IResetPasswordParams,
+  IConfirmResetPasswordParams,
+} from "../interfaces/auth.types";
+import { AppError } from "../classes/appError.class";
+import { IUserParams } from "../../user";
+import { FE_URL, SECRET_KEY } from "../configs/config";
+import Handlebars from "handlebars";
+import mailer from "../lib/nodemailer";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
-if (!JWT_SECRET) throw new Error("JWT_SECRET is not defined");
+/**
+ * User Login service
+ * - Cari user by email
+ * - Validasi password
+ * - Generate JWT token (exp: 4h)
+ *
+ * @param params - object berisi email & password
+ * @returns user object + JWT token
+ * @throws AppError(401) jika credentials invalid
+ * @throws AppError(404) jika user tidak ditemukan
+ */
+export async function userLoginService(params: ILoginParams) {
+  try {
+    const { email, password } = params;
+    const user = await findUserByEmail(prisma, email);
+    if (user.role !== "USER") {
+      throw new AppError(403, "Only USER role can login on this page");
+    }
 
-// LOGIN
-export async function loginService({ email, password }: ILoginParam) {
-  const user = await findUserByEmail(email);
-  if (!user) throw new Error("User not found");
-  if (!user.isVerified) throw new Error("Please verify your email first");
-  if (!user.password)
-    throw new Error("Password not set, complete profile first");
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password as string
+    );
+    if (!validPassword) throw new AppError(401, "Invalid credentials");
 
-  const validPassword = await bcrypt.compare(password, user.password);
-  if (!validPassword) throw new Error("Invalid credentials");
-
-  const token = jwt.sign(
-    {
+    const userPayload: IUserParams = {
       id: user.id,
+      email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
-      email: user.email,
+      avatar: user.avatar || null,
       role: user.role,
-    },
-    JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+    };
 
-  return { user, token };
-}
+    const token = sign(userPayload, SECRET_KEY as string, { expiresIn: "4h" });
 
-// REGISTER
-export async function registerService(data: IRegisterParam) {
-  const existing = await findUserByEmail(data.email);
-  if (existing) throw new Error("Email already registered");
-
-  const user = await registerUser({
-    id: data.id,
-    email: data.email,
-    role: data.role,
-    isVerified: false,
-  });
-
-  const verifyToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-    expiresIn: "1h",
-  });
-
-  await saveTemporaryToken(
-    user.id,
-    verifyToken,
-    new Date(Date.now() + 60 * 60 * 1000)
-  );
-
-  const verifyUrl = `${
-    process.env.FE_URL || "http://localhost:3000/"
-  }auth/verify?token=${verifyToken}`;
-
-  await transporter.sendMail({
-    from: process.env.NODEMAILER_EMAIL,
-    to: user.email,
-    subject: "Verify your email",
-    html: `<p>Hi,</p>
-           <p>Click below to verify your email:</p>
-           <a href="${verifyUrl}">${verifyUrl}</a>`,
-  });
-
-  return user;
-}
-
-// VERIFY EMAIL
-export async function verifyEmailService(token: string) {
-  const tempToken = await findTemporaryToken(token);
-  if (!tempToken) throw new Error("Token tidak valid");
-  if (tempToken.expired_at < new Date()) {
-    throw new Error("Token sudah kadaluarsa");
+    return { userPayload, token };
+  } catch (err) {
+    throw err;
   }
-
-  const user = await prisma.user.update({
-    where: { id: tempToken.user_id },
-    data: { isVerified: true },
-  });
-
-  return { user, message: "Email berhasil diverifikasi" };
 }
 
-export async function setPasswordService(token: string, password: string) {
-  const tempToken = await findTemporaryToken(token);
-  if (!tempToken) throw new Error("Token tidak valid");
-  if (tempToken.expired_at < new Date()) {
-    await deleteTemporaryToken(tempToken.id);
-    throw new Error("Token sudah kadaluarsa");
+/**
+ * Tenant Login Service
+ * - Cari user by email
+ * - Validasi password
+ * - Generate JWT token (exp: 4h)
+ *
+ * @param params - object berisi email & password
+ * @returns tenant object + JWT token
+ * @throws AppError(401) jika credentials invalid
+ * @throws AppError(404) jika tenant tidak ditemukan
+ * @throws AppError(403) jika role bukan TENANT
+ */
+export async function tenantLoginService(params: ILoginParams) {
+  try {
+    const { email, password } = params;
+    const user = await findUserByEmail(prisma, email);
+
+    if (user.role !== "TENANT") {
+      throw new AppError(403, "Only TENANT role can login on this page");
+    }
+
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password as string
+    );
+    if (!validPassword) throw new AppError(401, "Invalid credentials");
+
+    const tenantPayload: IUserParams = {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      avatar: user.avatar || null,
+      role: user.role,
+    };
+
+    const token = sign(tenantPayload, SECRET_KEY as string, {
+      expiresIn: "4h",
+    });
+
+    return { tenantPayload, token };
+  } catch (err) {
+    throw err;
   }
+}
 
-  const hashed = await bcrypt.hash(password, 10);
+/**
+ * Service untuk handle registrasi awal user.
+ *
+ * Alur:
+ * 1. Cek apakah user dengan email sudah ada.
+ * 2. Buat JWT token verifikasi (expire 1 hari).
+ * 3. Simpan token sementara ke tabel Temporary_Tokens.
+ * 4. Render email template (Handlebars) untuk verifikasi.
+ * 5. Kirim email ke user dengan link verifikasi.
+ *
+ * @param params - object berisi data registrasi (email)
+ * @returns response dari saveTemporaryToken (berisi token, expired_at, dsb)
+ *
+ * Error handling:
+ * - Jika email sudah terdaftar → lempar AppError(409, "User already exists")
+ * - Jika terjadi error saat DB / email → dilempar ke errorHandler Express
+ */
 
-  const user = await prisma.user.update({
-    where: { id: tempToken.user_id },
-    data: { password: hashed },
-  });
+export async function registerService(email: string) {
+  const message = "Registration successful.";
+  try {
+    await isUserExists(prisma, email);
 
-  // hapus token biar tidak bisa dipakai ulang
-  await deleteTemporaryToken(tempToken.id);
+    const payload = {
+      email,
+    };
 
-  return { user, message: "Password berhasil disimpan" };
+    const verifyToken = sign(payload, SECRET_KEY as string, {
+      expiresIn: "1d",
+    });
+    const expired_at = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const response = await createTemporaryToken(
+      prisma,
+      verifyToken,
+      expired_at,
+      "REGISTRATION"
+    );
+
+    // Send Mail Disini
+    const hbsPath = path.join(
+      __dirname,
+      "../templates/registerService.template.hbs"
+    );
+    const readHbs = await fs.readFile(hbsPath, "utf-8");
+    const compiledHbs = Handlebars.compile(readHbs);
+    const html = compiledHbs({
+      email: email,
+      feurl: `${FE_URL}/auth/complete-registration`,
+      token: response.token,
+      year: new Date().getFullYear(),
+    });
+
+    await mailer.sendMail({
+      to: email,
+      subject: "RESTIFY - Complete Your Registration",
+      html,
+    });
+
+    return message;
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Complete Registration
+/**
+ * Service untuk menyelesaikan registrasi user setelah verifikasi email.
+ *
+ * Flow:
+ * 1. Pastikan token REGISTRATION valid (findTemporaryToken).
+ * 2. Hash password dengan bcrypt (saltRounds = 10).
+ * 3. Gunakan transaksi:
+ *    - Insert user baru ke tabel Users.
+ *    - Hapus token REGISTRATION agar tidak bisa dipakai ulang.
+ * 4. Return message sukses.
+ *
+ * @param params - data registrasi lengkap:
+ *  - first_name, last_name, password, role, token, email
+ *
+ * @returns string - pesan "Registration successful."
+ *
+ * @throws AppError jika:
+ *  - token tidak valid
+ *  - email sudah dipakai (unique constraint)
+ *  - DB error lain saat transaksi
+ *
+ * Catatan:
+ * - Password disimpan dalam bentuk hash (bukan plain text).
+ * - Transaksi memastikan atomicity (jika createUser gagal, token tidak terhapus).
+ * - Return hanya message.
+ */
+export async function completeRegisterService(params: ICompleteRegisterParams) {
+  const { first_name, last_name, password, role, token, email } = params;
+  const message = "Registration successful.";
+  try {
+    await isUserExists(prisma, email);
+    await findTemporaryToken(prisma, params.token, "REGISTRATION");
+
+    const salt = await genSalt(10);
+    const hashed = await hash(params.password, salt);
+
+    await prisma.$transaction(async (tx) => {
+      await createNewUser(tx, email, first_name, last_name, role, hashed);
+
+      await deleteTemporaryToken(tx, token);
+    });
+
+    return message;
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Request reset password
+export async function resetPasswordService(
+  params: IResetPasswordParams
+): Promise<string> {
+  try {
+    const user = await findUserByEmail(prisma, params.email);
+
+    if (user.is_external_login) {
+      throw new AppError(
+        400,
+        "Reset password not available for social login users"
+      );
+    }
+
+    const payload = { email: params.email, type: "RESET_PASSWORD" };
+    const token = sign(payload, SECRET_KEY as string, { expiresIn: "1h" });
+    const expired_at = new Date(Date.now() + 60 * 60 * 1000);
+
+    const response = await createTemporaryToken(
+      prisma,
+      token,
+      expired_at,
+      "RESET_PASSWORD",
+      user.id
+    );
+
+    // Load HBS template
+    const hbsPath = path.join(
+      __dirname,
+      "../templates/resetPassword.template.hbs"
+    );
+    const readHbs = await fs.readFile(hbsPath, "utf-8");
+    const compiledHbs = Handlebars.compile(readHbs);
+    const html = compiledHbs({
+      email: params.email,
+      feurl: `${FE_URL}/auth/confirm-reset`,
+      token: response.token,
+      year: new Date().getFullYear(),
+    });
+
+    await mailer.sendMail({
+      to: params.email,
+      subject: "RESTIFY - Reset Your Password",
+      html,
+    });
+
+    return "Reset password email sent.";
+  } catch (err) {
+    throw err;
+  }
+}
+
+// Confirm reset password
+export async function confirmResetPasswordService(
+  params: IConfirmResetPasswordParams
+): Promise<string> {
+  try {
+    const tempToken = await findTemporaryToken(
+      prisma,
+      params.token,
+      "RESET_PASSWORD"
+    );
+    if (!tempToken) throw new AppError(400, "Invalid or expired token");
+
+    const salt = await genSalt(10);
+    const hashed = await hash(params.new_password, salt);
+
+    await prisma.$transaction(async (tx) => {
+      await updateUserPassword(tx, tempToken.user_id as string, hashed);
+      await deleteTemporaryToken(tx, params.token);
+    });
+
+    return "Password has been reset successfully.";
+  } catch (err) {
+    throw err;
+  }
 }

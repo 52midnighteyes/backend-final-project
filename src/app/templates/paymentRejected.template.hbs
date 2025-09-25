@@ -1,0 +1,57 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Payment Rejected</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      .preheader{display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all}
+      body{font-family:'Poppins',Arial,sans-serif;background-color:#f1f1f1;margin:0;padding:24px;color:#161616}
+      .container{max-width:480px;margin:0
+      auto;background:#fff;border-radius:10px;padding:28px;border:1px dashed
+      #d9d9d9;box-shadow:0 4px 8px rgba(0,0,0,0.04)}
+      .badge{display:inline-block;font-size:12px;font-weight:600;padding:4px
+      10px;border-radius:999px;letter-spacing:.3px;background:#fdeaea;color:#c21e2b;border:1px
+      solid #f8cccc;margin:0 auto 12px} h1{font-size:22px;margin:8px 0
+      14px;text-align:center;color:#c21e2b} p{margin:0 0
+      16px;line-height:1.6;font-size:14px} .info{background:#fafafa;border:1px
+      dashed #e5e5e5;border-radius:8px;padding:16px;margin:20px 0}
+      .label{color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+      .value{font-weight:600;margin-bottom:12px;font-size:14px}
+      .footer{margin-top:24px;font-size:12px;color:#888;text-align:center;line-height:1.4}
+      @media (max-width:520px){body{padding:16px}.container{padding:20px}}
+    </style>
+  </head>
+  <body>
+    <span class="preheader">Your payment was rejected. Please check your
+      transaction ID below.</span>
+
+    <div class="container">
+      <div class="badge">Payment Rejected</div>
+      <h1>Payment Not Approved</h1>
+
+      <p>Hello <strong>{{email}}</strong>,</p>
+      <p>
+        We’re sorry, but your payment for
+        <strong>{{property_name}}</strong>
+        has been
+        <strong>rejected</strong>. Please use the Transaction ID below if you
+        need to follow up with our support team.
+      </p>
+
+      <div class="info">
+        <div class="label">Transaction ID</div>
+        <div class="value">{{transaction_id}}</div>
+      </div>
+
+      <p style="font-size:13px;color:#666">
+        If this payment was not made by you, you can safely ignore this email.
+      </p>
+
+      <div class="footer">
+        &copy;
+        {{year}}
+        Restify<br />All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
